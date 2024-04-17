@@ -1,10 +1,17 @@
 const pool = require('../db/db.js')
 const bcrypt = require('bcrypt')
 const {validationResult}=require('express-validator')
-const { produceMessage } = require('../kafka/kafka.js')
+const { produceMessage, consumeMessages } = require('../kafka/kafka.js')
 const createUser = async (req, res) => {
     try {
-        
+        const errors = validationResult(req)
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Errors',
+                errors: errors.array()
+            })
+        }
         const { username, email, password } = req.body
 
         const query1 = 'SELECT * FROM users where username=$1 OR email=$2'
@@ -18,7 +25,7 @@ const createUser = async (req, res) => {
                 message: "User with this credentials exists"
             })
         }
-        const encryptedPass = await bcrypt.hash(password, 20)
+        const encryptedPass = await bcrypt.hash(password, 10)
 
        const query2 = 'INSERT INTO users (username,email,password) VALUES ($1, $2, $3) RETURNING *'
        const values2 = [username, email, encryptedPass]
@@ -26,7 +33,6 @@ const createUser = async (req, res) => {
         const result2=await pool.query(query2,values2)
 
        await produceMessage({ username, email }).catch(console.error);
-
 
         res.status(201).json({
             success:true,

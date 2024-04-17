@@ -1,4 +1,4 @@
-const { Kafka } = require('kafkajs');
+const { Kafka } = require('kafkajs')
 const dotenv=require('dotenv')
 dotenv.config()
 const kafka = new Kafka({
@@ -33,7 +33,6 @@ const consumeMessages = async () => {
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
       console.log('Received message:', JSON.parse(message.value.toString()));
-      // Process the message as needed
     },
   });
 };
