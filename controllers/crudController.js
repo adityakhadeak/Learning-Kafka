@@ -1,21 +1,16 @@
 const pool = require('../db/db.js')
 const bcrypt = require('bcrypt')
+const {validationResult}=require('express-validator')
+const { produceMessage } = require('../kafka/kafka.js')
 const createUser = async (req, res) => {
     try {
-        const errors = validationResult(req)
-        if (!errors.isEmpty()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Errors',
-                errors: errors.array()
-            })
-        }
+        
         const { username, email, password } = req.body
 
-        let query1 = 'SELECT * FROM users where username=$1 OR email=$2'
-        let values1 = [username, email]
+        const query1 = 'SELECT * FROM users where username=$1 OR email=$2'
+        const values1 = [username, email]
 
-        let result1 = await pool.query(query1, values1)
+        const result1 = await pool.query(query1, values1)
 
         if (result1.rowCount != 0) {
             return res.status(400).json({
@@ -25,15 +20,18 @@ const createUser = async (req, res) => {
         }
         const encryptedPass = await bcrypt.hash(password, 20)
 
-        query1 = 'INSERT INTO users (username,email,password) VALUES ($1, $2, $3) RETURNING *'
-        values1 = [username, email, encryptedPass]
+       const query2 = 'INSERT INTO users (username,email,password) VALUES ($1, $2, $3) RETURNING *'
+       const values2 = [username, email, encryptedPass]
 
-        result1=await pool.query(query1,values1)
+        const result2=await pool.query(query2,values2)
+
+       await produceMessage({ username, email }).catch(console.error);
+
 
         res.status(201).json({
             success:true,
             message:"User created successfully",
-            user:result1.rows
+            user:result2.rows
         })
 
     } catch (error) {
@@ -135,9 +133,9 @@ const updateUser = async (req, res) => {
         const { username, email, password } = req.body
         const {id}=req.params
         const encryptedPass = await bcrypt.hash(password, 20)
-
-        let query1='UPDATE users SET username=$1, email=$2, password=$3 WHERE id=$4 RETURNING *'
-        let values1=[username,email,encryptedPass,id]
+        const currentDate= new Date()
+        let query1='UPDATE users SET username=$1, email=$2, password=$3,updated_at=$4 WHERE id=$5 RETURNING *'
+        let values1=[username,email,encryptedPass,currentDate,id]
 
         let result1=await pool.query(query1,values1)
 

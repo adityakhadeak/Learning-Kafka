@@ -5,7 +5,7 @@ const pool =new Pool({
     user:"postgres",
     port:5432,
     password:"2915",
-    database:"users"
+    database:"kafka"
 })
 
 module.exports=pool
